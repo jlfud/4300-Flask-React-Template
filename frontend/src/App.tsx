@@ -37,9 +37,14 @@ function App(): JSX.Element {
           <img src={SearchIcon} alt="search" />
           <input
             id="search-input"
-            placeholder="Search for a Keeping up with the Kardashians episode"
+            placeholder="Describe your relationship situation and press Enter"
             value={searchTerm}
-            onChange={(e) => handleSearch(e.target.value)}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                void handleSearch(searchTerm)
+              }
+            }}
           />
         </div>
       </div>
@@ -48,8 +53,13 @@ function App(): JSX.Element {
       <div id="answer-box">
         {episodes.map((episode, index) => (
           <div key={index} className="episode-item">
-            <h3 className="episode-title">{episode.title}</h3>
+            <h3 className="episode-title">
+              {episode.rank !== undefined ? `#${episode.rank} ` : ''}{episode.title}
+            </h3>
             <p className="episode-desc">{episode.descr}</p>
+            {episode.final_score_pct !== undefined && (
+              <p className="episode-rating">Final Score: {episode.final_score_pct.toFixed(2)}%</p>
+            )}
             <p className="episode-rating">
               Cosine Similarity Score: {(episode.cosine_similarity ?? episode.similarity_score ?? 0).toFixed(4)}
             </p>
