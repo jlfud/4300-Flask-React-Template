@@ -27,21 +27,17 @@ function App(): JSX.Element {
     <div className={`full-body-container ${useLlm ? 'llm-mode' : ''}`}>
       {/* Search bar (always shown) */}
       <div className="top-text">
-        <div className="google-colors">
-          <h1 id="google-4">4</h1>
-          <h1 id="google-3">3</h1>
-          <h1 id="google-0-1">0</h1>
-          <h1 id="google-0-2">0</h1>
-        </div>
+        <h1 className="project-title">Hey Girlies...</h1>
+        <p className="project-subtitle">Real stories, relatable advice, and community support.</p>
         <div className="input-box" onClick={() => document.getElementById('search-input')?.focus()}>
           <img src={SearchIcon} alt="search" />
           <input
             id="search-input"
-            placeholder="Search for a Keeping up with the Kardashians episode"
+            placeholder="Describe your relationship situation and press Enter"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') handleSearch(searchTerm)
+              if (e.key === 'Enter') void handleSearch(searchTerm)
             }}
           />
         </div>
@@ -49,14 +45,15 @@ function App(): JSX.Element {
 
       {/* Search results (always shown) */}
       <div id="answer-box">
+        {episodes.length > 0 && <p className="result-count">Top {episodes.length} results</p>}
         {episodes.map((episode, index) => (
           <div key={index} className="episode-item">
             <h3 className="episode-title">{episode.title}</h3>
             <p className="episode-desc">{episode.descr}</p>
             <p className="episode-rating">
-              IMDB Rating: {episode.imdb_rating}
+              Upvote Score: {episode.imdb_rating}
               {episode.similarity_score !== undefined && (
-                <span style={{ marginLeft: '15px', fontWeight: 'bold', color: '#007bff' }}>
+                <span className="score-chip">
                   Cosine Similarity: {episode.similarity_score.toFixed(4)}
                 </span>
               )}
