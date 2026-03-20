@@ -39,7 +39,10 @@ function App(): JSX.Element {
             id="search-input"
             placeholder="Search for a Keeping up with the Kardashians episode"
             value={searchTerm}
-            onChange={(e) => handleSearch(e.target.value)}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleSearch(searchTerm)
+            }}
           />
         </div>
       </div>
@@ -50,7 +53,14 @@ function App(): JSX.Element {
           <div key={index} className="episode-item">
             <h3 className="episode-title">{episode.title}</h3>
             <p className="episode-desc">{episode.descr}</p>
-            <p className="episode-rating">IMDB Rating: {episode.imdb_rating}</p>
+            <p className="episode-rating">
+              IMDB Rating: {episode.imdb_rating}
+              {episode.similarity_score !== undefined && (
+                <span style={{ marginLeft: '15px', fontWeight: 'bold', color: '#007bff' }}>
+                  Cosine Similarity: {episode.similarity_score.toFixed(4)}
+                </span>
+              )}
+            </p>
           </div>
         ))}
       </div>
