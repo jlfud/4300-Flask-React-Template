@@ -7,7 +7,7 @@
   justify-content: start;
   align-items: center;
   flex-direction: column;
-  background-color: #ffffff;
+  background: linear-gradient(180deg, #fff7fb 0%, #fff 35%, #fff 100%);
 }
 
 /* ── Header ────────────────────────────────────────────────────────────────── */
@@ -16,24 +16,23 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  margin-top: 28px;
 }
 
-.google-colors {
-  display: flex;
-  align-items: center;
-  font-size: 48px;
-  font-family: 'Open Sans', sans-serif;
+.project-title {
+  font-family: 'Kanit', sans-serif;
+  font-size: 2.8rem;
+  color: #d64a8f;
+  margin-bottom: 4px;
 }
 
-.google-colors h1 {
-  margin-bottom: 0;
-  margin-right: 3px;
+.project-subtitle {
+  font-family: 'Montserrat', sans-serif;
+  color: #5f6368;
+  margin-bottom: 12px;
+  text-align: center;
+  padding: 0 16px;
 }
-
-#google-4   { color: #F4B400; }
-#google-3   { color: #4285F4; }
-#google-0-1 { color: #0F9D58; }
-#google-0-2 { color: #DB4437; }
 
 /* ── Search bar ────────────────────────────────────────────────────────────── */
 
@@ -51,7 +50,7 @@
 
 .input-box:hover,
 .input-box:focus-within {
-  box-shadow: 0 1px 6px rgba(32, 33, 36, 0.28);
+  box-shadow: 0 2px 10px rgba(214, 74, 143, 0.18);
   border-color: transparent;
 }
 
@@ -81,16 +80,24 @@
   margin-top: 2rem;
 }
 
+.result-count {
+  font-family: 'Open Sans', sans-serif;
+  color: #5f6368;
+  font-size: 0.95rem;
+  margin-bottom: -8px;
+}
+
 .episode-item {
   padding: 1.5rem;
-  background-color: #f8f9fa;
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  background-color: #fff;
+  border-radius: 14px;
+  border: 1px solid #f4d2e5;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .episode-title {
   font-size: 1.25rem;
-  color: #1a73e8;
+  color: #b22f74;
   margin-bottom: 0.5rem;
   font-family: 'Kanit', sans-serif;
 }
@@ -105,7 +112,7 @@
 
 .episode-rating {
   font-size: 0.9rem;
-  color: #5f6368;
+  color: #6b3b58;
   font-weight: 600;
 }
 
@@ -230,7 +237,7 @@
 }
 
 @media (max-width: 768px) {
-  .google-colors h1 { font-size: 3rem; }
+  .project-title { font-size: 2.2rem; }
   .input-box { width: 90%; }
   #answer-box { padding: 0 1rem; }
   #messages { padding: 0 8px 8px; }

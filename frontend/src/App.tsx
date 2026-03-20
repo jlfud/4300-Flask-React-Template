@@ -27,12 +27,10 @@ function App(): JSX.Element {
     <div className={`full-body-container ${useLlm ? 'llm-mode' : ''}`}>
       {/* Search bar (always shown) */}
       <div className="top-text">
-        <div className="google-colors">
-          <h1 id="google-4">4</h1>
-          <h1 id="google-3">3</h1>
-          <h1 id="google-0-1">0</h1>
-          <h1 id="google-0-2">0</h1>
-        </div>
+        <h1 className="project-title">Hey Girlies...</h1>
+        <p className="project-subtitle">
+          Relatable relationship advice from real experiences.
+        </p>
         <div className="input-box" onClick={() => document.getElementById('search-input')?.focus()}>
           <img src={SearchIcon} alt="search" />
           <input
@@ -51,6 +49,9 @@ function App(): JSX.Element {
 
       {/* Search results (always shown) */}
       <div id="answer-box">
+        {episodes.length > 0 && (
+          <p className="result-count">Top {episodes.length} matches</p>
+        )}
         {episodes.map((episode, index) => (
           <div key={index} className="episode-item">
             <h3 className="episode-title">
