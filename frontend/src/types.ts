@@ -1,6 +1,7 @@
 export interface Episode {
   title: string;
   descr: string;
+  url?: string;
   imdb_rating: number;
   similarity_score?: number;
   cosine_similarity?: number;
@@ -9,4 +10,10 @@ export interface Episode {
   final_score?: number;
   final_score_pct?: number;
   rank?: number;
+  num_comments?: number;
+  top_matching_dimensions?: {
+    id: number;
+    contribution: number;
+    words: string[];
+  }[];
 }

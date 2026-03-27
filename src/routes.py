@@ -17,112 +17,58 @@ USE_LLM = False
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-DIMENSIONS = ["abusive", "time", "talking", "school"]
-TOKEN_RE = re.compile(r"[a-zA-Z0-9_'/\-]+")
-_EPISODE_VECTOR_CACHE = None
+import pandas as pd
+import numpy as np
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.decomposition import TruncatedSVD
+from sklearn.metrics.pairwise import cosine_similarity as sklearn_cosine_similarity
 
-# Query terms that should count toward each baseline dimension.
-QUERY_DIMENSION_SYNONYMS = {
-    "abusive": {
-        "abusive", "abuse", "abused", "toxic", "violent", "violence", "harassment",
-        "controlling", "manipulative", "gaslight", "gaslighting",
-    },
-    "time": {
-        "time", "busy", "schedule", "hours", "week", "weeks", "month", "months",
-        "distance", "longdistance", "ignore", "ignored",
-    },
-    "talking": {
-        "talking", "talk", "communication", "communicate", "conversation", "argue", "arguing",
-        "relationship", "boyfriend", "girlfriend", "partner", "husband", "wife", "spouse",
-        "issue", "issues", "problem", "problems", "trust", "cheat", "cheating", "love",
-        "breakup", "break", "ex",
-    },
-    "school": {"school", "college", "class", "classes", "university", "campus", "homework"},
-}
+_SEARCH_MODELS = None
 
-
-def zero_vector():
-    return {dim: 0.0 for dim in DIMENSIONS}
-
-
-def safe_float(value):
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return 0.0
-
-
-def normalize_token(token):
-    return token.lower().strip("_'/-")
-
-
-def query_to_vector(query):
-    vec = zero_vector()
-    for token in TOKEN_RE.findall(query or ""):
-        normalized = normalize_token(token)
-        if not normalized:
-            continue
-        for dim, vocab in QUERY_DIMENSION_SYNONYMS.items():
-            if normalized in vocab:
-                vec[dim] += 1.0
-    return vec
-
-
-def load_episode_vectors():
-    global _EPISODE_VECTOR_CACHE
-    if _EPISODE_VECTOR_CACHE is not None:
-        return _EPISODE_VECTOR_CACHE
+def get_search_models():
+    global _SEARCH_MODELS
+    if _SEARCH_MODELS is not None:
+        return _SEARCH_MODELS
 
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    init_path = os.path.join(current_dir, "init.json")
-    cache = {}
-    if os.path.exists(init_path):
-        with open(init_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        for row in data.get("episodes", []):
-            episode_id = row.get("id")
-            if episode_id is None:
-                continue
-            cache[int(episode_id)] = {
-                "abusive": safe_float(row.get("abusive", 0)),
-                "time": safe_float(row.get("time", 0)),
-                "talking": safe_float(row.get("talking", 0)),
-                "school": safe_float(row.get("school", 0)),
-            }
-    _EPISODE_VECTOR_CACHE = cache
-    return _EPISODE_VECTOR_CACHE
-
-
-def cosine_similarity(vec_a, vec_b):
-    dot_product = 0.0
-    norm_a_sq = 0.0
-    norm_b_sq = 0.0
-    for dim in DIMENSIONS:
-        a_val = safe_float(vec_a.get(dim, 0.0))
-        b_val = safe_float(vec_b.get(dim, 0.0))
-        dot_product += a_val * b_val
-        norm_a_sq += a_val * a_val
-        norm_b_sq += b_val * b_val
-
-    denominator = math.sqrt(norm_a_sq) * math.sqrt(norm_b_sq)
-    if denominator == 0:
-        return 0.0
-    return round(dot_product / denominator, 4)
-
-
-def query_has_signal(query_vector):
-    return any(value > 0 for value in query_vector.values())
-
-
-def lexical_similarity(query, text):
-    query_tokens = set(TOKEN_RE.findall((query or "").lower()))
-    doc_tokens = set(TOKEN_RE.findall((text or "").lower()))
-    if not query_tokens or not doc_tokens:
-        return 0.0
-
-    jaccard = len(query_tokens.intersection(doc_tokens)) / len(query_tokens.union(doc_tokens))
-    fuzzy = SequenceMatcher(None, (query or "").lower(), (text or "").lower()).ratio()
-    return round(0.7 * jaccard + 0.3 * fuzzy, 4)
+    csv_path = os.path.join(current_dir, "relationship_advice_posts2.csv")
+    
+    # Load data
+    df = pd.read_csv(csv_path)
+    df['title'] = df['title'].fillna('')
+    df['body'] = df['body'].fillna('')
+    df['score'] = pd.to_numeric(df['score'], errors='coerce').fillna(0)
+    
+    # Create combined text
+    docs = df['title'] + " " + df['body']
+    
+    # TF-IDF
+    vectorizer = TfidfVectorizer(stop_words='english', max_df=0.8, min_df=5)
+    tfidf_matrix = vectorizer.fit_transform(docs)
+    
+    # SVD
+    n_components = min(100, tfidf_matrix.shape[1] - 1)
+    #THIS LINE IS REALLY IMPORTANT
+    if n_components < 1:
+        n_components = 1
+    svd = TruncatedSVD(n_components=n_components, random_state=42)
+    doc_vectors = svd.fit_transform(tfidf_matrix)
+    
+    # Precompute top words for each dimension
+    feature_names = vectorizer.get_feature_names_out()
+    dim_top_words = []
+    for component in svd.components_:
+        top_indices = component.argsort()[-5:][::-1]
+        dim_top_words.append([str(feature_names[i]) for i in top_indices])
+    
+    _SEARCH_MODELS = {
+        "df": df,
+        "vectorizer": vectorizer,
+        "svd": svd,
+        "doc_vectors": doc_vectors,
+        "dim_top_words": dim_top_words
+    }
+    return _SEARCH_MODELS
 
 
 def min_max_normalize(values):
@@ -137,8 +83,7 @@ def min_max_normalize(values):
 
 def blend_scores(cosine_scores, upvote_scores, upvote_weight=0.15):
     """
-    Inspired by ted-finds score blending:
-      combined = (1-w) * cosine + w * normalized_aux_signal
+    Combined = (1-w) * cosine + w * normalized_aux_signal
     """
     w = max(0.0, min(1.0, float(upvote_weight)))
     norm_upvotes = min_max_normalize(upvote_scores)
@@ -153,32 +98,71 @@ def json_search(query):
     if not query or not query.strip():
         query = "need relationship advice"
 
-    query_vector = query_to_vector(query)
-    has_query_signal = query_has_signal(query_vector)
-    # Optional tuning from query param (0.0 to 1.0) in /api/episodes route.
+    models = get_search_models()
+    df = models["df"]
+    vectorizer = models["vectorizer"]
+    svd = models["svd"]
+    doc_vectors = models["doc_vectors"]
+
+    # Transform query
+    query_tfidf = vectorizer.transform([query])
+    query_vec = svd.transform(query_tfidf)
+
+    # Compute cosine similarities between query and all docs
+    sims = sklearn_cosine_similarity(query_vec, doc_vectors)[0]
+    
+    # Get top 10 indices
+    top_indices = sims.argsort()[-10:][::-1]
+    
+    # Avoid zero division when normalizing query
+    query_norm = np.linalg.norm(query_vec[0])
+    q_vec_normalized = query_vec[0] / query_norm if query_norm > 0 else query_vec[0]
+    
     upvote_weight = 0.15
-    episode_vectors = load_episode_vectors()
-    results = db.session.query(Episode, Review).join(Review, Episode.id == Review.id).all()
     rows = []
-    for episode, review in results:
-        doc_vector = episode_vectors.get(episode.id, zero_vector())
-        if has_query_signal:
-            cosine_score = cosine_similarity(query_vector, doc_vector)
-        else:
-            # Fallback: sentence-level lexical similarity for broad natural-language inputs.
-            cosine_score = lexical_similarity(query, f"{episode.title} {episode.descr}")
+    dim_top_words = models["dim_top_words"]
+    
+    for idx in top_indices:
+        row_data = df.iloc[idx]
+        sim_score = float(sims[idx])
+        upvote_score = float(row_data['score'])
+        
+        # Calculate matching dimensions contribution
+        d_vec = doc_vectors[idx]
+        d_norm = np.linalg.norm(d_vec)
+        d_vec_normalized = d_vec / d_norm if d_norm > 0 else d_vec
+        
+        # Element-wise product gives contribution of each dimension to cosine similarity
+        contributions = q_vec_normalized * d_vec_normalized
+        top_contrib_indices = contributions.argsort()[-5:][::-1]
+        
+        top_matching_dimensions = []
+        for d_idx in top_contrib_indices:
+            top_matching_dimensions.append({
+                "id": int(d_idx),
+                "contribution": round(float(contributions[d_idx]), 4),
+                "words": dim_top_words[d_idx]
+            })
+        
+        # Format descriptor text
+        body_text = str(row_data['body'])
+        if len(body_text) > 500:
+            body_text = body_text[:500] + "..."
+            
         rows.append({
-            "title": episode.title,
-            "descr": episode.descr,
-            # Keep legacy key for existing frontend compatibility.
-            "imdb_rating": review.imdb_rating,
-            # Baseline output fields requested by assignment.
-            "upvote_score": review.imdb_rating,
-            "cosine_similarity": cosine_score,
-            "similarity_score": cosine_score,
-            "query_vector": query_vector,
-            "post_vector": doc_vector,
+            "title": str(row_data['title']),
+            "descr": body_text,
+            "id": str(row_data['id']),
+            "url": str(row_data.get('url', '')),
+            "num_comments": int(row_data.get('num_comments', 0)),
+            # Keep legacy key for existing frontend compatibility
+            "imdb_rating": upvote_score,
+            "upvote_score": upvote_score,
+            "cosine_similarity": round(sim_score, 4),
+            "similarity_score": round(sim_score, 4),
+            "top_matching_dimensions": top_matching_dimensions,
         })
+
     cosine_scores = [row["cosine_similarity"] for row in rows]
     upvote_scores = [row["upvote_score"] for row in rows]
     final_scores, norm_upvotes = blend_scores(cosine_scores, upvote_scores, upvote_weight=upvote_weight)
@@ -193,9 +177,11 @@ def json_search(query):
         }
 
     rows.sort(key=lambda item: (item["final_score"], item["cosine_similarity"]), reverse=True)
+    
     top_rows = rows[:10]
     for rank, row in enumerate(top_rows, start=1):
         row["rank"] = rank
+        
     return top_rows
 
 

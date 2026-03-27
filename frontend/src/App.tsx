@@ -55,7 +55,14 @@ function App(): JSX.Element {
         {episodes.map((episode, index) => (
           <div key={index} className="episode-item">
             <h3 className="episode-title">
-              {episode.rank !== undefined ? `#${episode.rank} ` : ''}{episode.title}
+              {episode.rank !== undefined ? `#${episode.rank} ` : ''}
+              {episode.url ? (
+                <a href={episode.url} target="_blank" rel="noopener noreferrer" style={{color: 'inherit'}}>
+                  {episode.title}
+                </a>
+              ) : (
+                episode.title
+              )}
             </h3>
             <p className="episode-desc">{episode.descr}</p>
             {episode.final_score_pct !== undefined && (
@@ -67,6 +74,22 @@ function App(): JSX.Element {
             <p className="episode-rating">
               Upvote Score: {(episode.upvote_score ?? episode.imdb_rating).toFixed(1)}
             </p>
+            <p className="episode-rating">
+              Number of Comments: {episode.num_comments ?? 0}
+            </p>
+            {episode.top_matching_dimensions && episode.top_matching_dimensions.length > 0 && (
+              <div className="matching-dimensions" style={{ marginTop: '10px', fontSize: '0.9em' }}>
+                <strong>Top Matching Semantic Dimensions:</strong>
+                <ul style={{ margin: '5px 0 0 20px', padding: 0 }}>
+                  {episode.top_matching_dimensions.map((dim, dIdx) => (
+                    <li key={dIdx}>
+                      Dimension {dim.id} (Contribution: {dim.contribution.toFixed(4)})<br/>
+                      <em>Top words: {dim.words.join(", ")}</em>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         ))}
       </div>
