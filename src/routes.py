@@ -42,13 +42,21 @@ def get_search_models():
     # Create combined text
     docs = df['title'] + " " + df['body']
     
-    # TF-IDF
-    vectorizer = TfidfVectorizer(stop_words='english', max_df=0.8, min_df=5)
+    from nltk.stem.snowball import SnowballStemmer
+    stemmer = SnowballStemmer("english")
+    
+    class StemmedTfidfVectorizer(TfidfVectorizer):
+        def build_analyzer(self):
+            analyzer = super(StemmedTfidfVectorizer, self).build_analyzer()
+            return lambda doc: [stemmer.stem(w) for w in analyzer(doc)]
+            
+    # TF-IDF (Now with Stemming!)
+    vectorizer = StemmedTfidfVectorizer(stop_words='english', max_df=0.8, min_df=5)
     tfidf_matrix = vectorizer.fit_transform(docs)
     
     # SVD
-    n_components = min(10, tfidf_matrix.shape[1] - 1)
-    #THIS LINE IS REALLY IMPORTANT
+    # Increased components to 500 to retain more granular variance for words like "cheats"
+    n_components = min(500, tfidf_matrix.shape[1] - 1)
     if n_components < 1:
         n_components = 1
     svd = TruncatedSVD(n_components=n_components, random_state=42)
@@ -108,7 +116,7 @@ def json_search(query):
     query_tfidf = vectorizer.transform([query])
     query_vec = svd.transform(query_tfidf)
 
-    # Compute cosine similarities between query and all docs
+    # Compute purely SVD cosine similarities between query and all docs
     sims = sklearn_cosine_similarity(query_vec, doc_vectors)[0]
     
     # Get top 10 indices
@@ -144,8 +152,8 @@ def json_search(query):
                 "words": dim_top_words[d_idx]
             })
 
-        # Calculate radar chart strengths
-        strengths = np.abs(d_vec)
+        # Calculate radar chart strengths using only the top 10 macro dimensions
+        strengths = np.abs(d_vec[:10])
         if np.max(strengths) > 0:
             strengths = strengths / np.max(strengths)
         
@@ -156,9 +164,9 @@ def json_search(query):
         ]
         
         radar_strengths = []
-        for i in range(len(strengths)):
+        for i in range(10):
             radar_strengths.append({
-                "name": dim_names[i] if i < len(dim_names) else f"Dim {i}",
+                "name": dim_names[i],
                 "value": round(float(strengths[i]), 4)
             })
         
