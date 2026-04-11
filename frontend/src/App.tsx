@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import './App.css'
 import SearchIcon from './assets/mag.png'
 import { Episode, FilterOptionsPayload } from './types'
@@ -16,6 +16,20 @@ type HeartBurst = {
 }
 
 const THEME_STORAGE_KEY = 'hey-girlie-theme'
+
+const EXAMPLE_SEARCHES = [
+  'long distance relationship stress',
+  'partner cheated what do I do',
+  'trust issues after lying',
+  'meeting my partner’s parents',
+  'how to set boundaries kindly',
+] as const
+
+const HOW_IT_WORKS = [
+  { step: '1', title: 'Describe it', body: 'Type what you’re going through in plain language.' },
+  { step: '2', title: 'We match', body: 'Semantic search finds similar real Reddit posts.' },
+  { step: '3', title: 'Read & reflect', body: 'Open threads for full context—not a substitute for pros.' },
+] as const
 
 type ThemeMode = 'light' | 'dark'
 
@@ -44,6 +58,11 @@ function formatPct(pct: number | undefined): string {
 function formatNum(n: number | undefined, digits = 2): string {
   if (n === undefined || Number.isNaN(n)) return '—'
   return n.toFixed(digits)
+}
+
+type SearchSnapshot = {
+  query: string
+  episodes: Episode[]
 }
 
 function buildEpisodesUrl(title: string, f: {
@@ -239,6 +258,8 @@ function App(): JSX.Element {
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [safeMode, setSafeMode] = useState(false)
   const [blockwords, setBlockwords] = useState('')
+  const [searchHistoryBack, setSearchHistoryBack] = useState<SearchSnapshot[]>([])
+  const [showScrollTop, setShowScrollTop] = useState(false)
 
   useEffect(() => {
     fetch('/api/config').then(r => r.json()).then(data => setUseLlm(data.use_llm))
@@ -259,6 +280,19 @@ function App(): JSX.Element {
       /* ignore */
     }
   }, [theme])
+
+  useEffect(() => {
+    const onScroll = (): void => {
+      setShowScrollTop(window.scrollY > 360)
+    }
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
+  const scrollToTop = useCallback((): void => {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [])
 
   const spawnHearts = (count = 7): void => {
     const now = Date.now()
@@ -282,11 +316,28 @@ function App(): JSX.Element {
     }, maxLifetime + 60)
   }
 
+  const goBackSearch = (): void => {
+    if (searchHistoryBack.length === 0) return
+    const snap = searchHistoryBack[searchHistoryBack.length - 1]
+    setSearchHistoryBack((h) => h.slice(0, -1))
+    setSearchTerm(snap.query)
+    setLastQuery(snap.query)
+    setEpisodes(snap.episodes)
+  }
+
   const handleSearch = async (value: string): Promise<void> => {
     setSearchTerm(value)
     const q = value.trim()
+    if (q === '') {
+      setLastQuery('')
+      setEpisodes([])
+      return
+    }
+    const prevQ = lastQuery.trim()
+    if (prevQ !== '' && prevQ !== q) {
+      setSearchHistoryBack((h) => [...h, { query: lastQuery, episodes: [...episodes] }])
+    }
     setLastQuery(q)
-    if (q === '') { setEpisodes([]); return }
     setIsLoading(true)
     try {
       const url = buildEpisodesUrl(q, {
@@ -303,8 +354,14 @@ function App(): JSX.Element {
 
   if (useLlm === null) return <></>
 
+  const showResultsChrome = isLoading || episodes.length > 0 || Boolean(lastQuery)
+  const showLandingWelcome = !lastQuery && !isLoading && episodes.length === 0
+
   return (
     <div className={`full-body-container ${useLlm ? 'llm-mode' : ''}`}>
+      <a href="#main-content" className="skip-link">
+        Skip to search and results
+      </a>
       <div className="theme-switcher" role="group" aria-label="Color mode">
         {(['light', 'dark'] as const).map((t) => (
           <button
@@ -319,6 +376,7 @@ function App(): JSX.Element {
         ))}
       </div>
 
+      <main id="main-content" className="site-main" tabIndex={-1}>
       {/* Search bar (always shown) */}
       <div className="top-text">
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '24px' }}>
@@ -372,20 +430,80 @@ function App(): JSX.Element {
         <p className="project-subtitle">
           Relatable relationship advice from real Reddit posts!
         </p>
-        <div className="input-box" onClick={() => document.getElementById('search-input')?.focus()}>
-          <img src={SearchIcon} alt="search" />
-          <input
-            id="search-input"
-            placeholder="Describe your relationship situation and press Enter"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                void handleSearch(searchTerm)
-              }
-            }}
-          />
+
+        <div className="how-it-works" aria-label="How this search works">
+          {HOW_IT_WORKS.map((item) => (
+            <div key={item.step} className="how-it-works__card">
+              <span className="how-it-works__step" aria-hidden="true">{item.step}</span>
+              <div className="how-it-works__text">
+                <span className="how-it-works__title">{item.title}</span>
+                <span className="how-it-works__body">{item.body}</span>
+              </div>
+            </div>
+          ))}
         </div>
+
+        <div className="search-bar-row">
+          <button
+            type="button"
+            className="search-history-back"
+            onClick={goBackSearch}
+            disabled={searchHistoryBack.length === 0 || isLoading}
+            aria-label="Previous search"
+            title={
+              searchHistoryBack.length === 0
+                ? 'No previous search'
+                : `Back to “${searchHistoryBack[searchHistoryBack.length - 1].query}”`
+            }
+          >
+            <span className="search-history-back__icon" aria-hidden="true">←</span>
+          </button>
+          <div className="input-box" onClick={() => document.getElementById('search-input')?.focus()}>
+            <img src={SearchIcon} alt="search" />
+            <input
+              id="search-input"
+              placeholder="Describe your relationship situation and press Enter"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  void handleSearch(searchTerm)
+                }
+              }}
+            />
+          </div>
+        </div>
+
+        <p className="search-hint" role="note">
+          <kbd className="kbd">Enter</kbd> to search · <span className="search-hint__muted">← returns to your previous topic</span>
+        </p>
+
+        <div className="suggestion-chips" aria-label="Example searches">
+          <span className="suggestion-chips__label">Try:</span>
+          <div className="suggestion-chips__list">
+            {EXAMPLE_SEARCHES.map((phrase) => (
+              <button
+                key={phrase}
+                type="button"
+                className="suggestion-chip"
+                onClick={() => { void handleSearch(phrase) }}
+              >
+                {phrase}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {showLandingWelcome ? (
+          <aside className="landing-panel" aria-label="Tips">
+            <h2 className="landing-panel__title">Before you search</h2>
+            <ul className="landing-panel__list">
+              <li>Be specific—feelings, situation, and what you want help with work best.</li>
+              <li>Results are from a curated dataset; open the Reddit link for the full thread.</li>
+              <li>Use <strong>Filters</strong> below to hide topics or words you don’t want to see.</li>
+            </ul>
+          </aside>
+        ) : null}
 
         <div className="search-filters">
           <button
@@ -440,8 +558,24 @@ function App(): JSX.Element {
         </div>
       </div>
 
+      <div className="section-rule-wrap" aria-hidden={!showResultsChrome}>
+        <hr className={`section-rule ${showResultsChrome ? 'section-rule--visible' : ''}`} />
+      </div>
+
       {/* Search results (always shown) */}
-      <div id="answer-box">
+      <div
+        id="answer-box"
+        className="answer-box-region"
+        role="region"
+        aria-label="Search results"
+        aria-live="polite"
+        aria-busy={isLoading}
+      >
+        {showResultsChrome ? (
+          <h2 className="results-section-heading" id="results-heading">
+            {isLoading ? 'Finding matches…' : episodes.length > 0 ? 'Your matches' : 'No matches yet'}
+          </h2>
+        ) : null}
         {isLoading ? (
           <>
             <div className="loading-card">
@@ -491,7 +625,12 @@ function App(): JSX.Element {
         ) : (
           <>
             {episodes.length > 0 && (
-              <p className="result-count">Top {episodes.length} matches</p>
+              <p className="result-count">
+                Top {episodes.length} matches
+                {lastQuery ? (
+                  <span className="result-count__query"> for “{lastQuery}”</span>
+                ) : null}
+              </p>
             )}
             {episodes.length === 0 && lastQuery && !isLoading ? (
               <p className="result-count result-count--empty">
@@ -504,6 +643,31 @@ function App(): JSX.Element {
           </>
         )}
       </div>
+
+      <footer className="site-footer">
+        <div className="site-footer__inner">
+          <p className="site-footer__brand">Hey Girlie</p>
+          <p className="site-footer__tagline">
+            Explore how others navigated similar feelings—then talk to someone you trust or a professional when you need to.
+          </p>
+          <p className="site-footer__disclaimer">
+            This tool is for discovery only. It is not therapy, legal advice, or crisis support.
+          </p>
+          <p className="site-footer__meta">© {new Date().getFullYear()} · Built for learning &amp; reflection</p>
+        </div>
+      </footer>
+      </main>
+
+      {showScrollTop ? (
+        <button
+          type="button"
+          className={`scroll-top-btn${useLlm ? ' scroll-top-btn--with-chat' : ''}`}
+          onClick={scrollToTop}
+          aria-label="Back to top"
+        >
+          <span aria-hidden="true">↑</span>
+        </button>
+      ) : null}
 
       {/* Chat (only when USE_LLM = True in routes.py) */}
       {useLlm && <Chat onSearchTerm={handleSearch} />}
