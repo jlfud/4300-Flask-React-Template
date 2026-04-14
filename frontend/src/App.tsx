@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import './App.css'
 import SearchIcon from './assets/mag.png'
-import { Episode, FilterOptionsPayload } from './types'
+import { Episode } from './types'
 import Chat from './Chat'
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip } from 'recharts'
 
@@ -26,9 +26,9 @@ const EXAMPLE_SEARCHES = [
 ] as const
 
 const HOW_IT_WORKS = [
-  { step: '1', title: 'Describe it', body: 'Type what you’re going through in plain language.' },
-  { step: '2', title: 'We match', body: 'Semantic search finds similar real Reddit posts.' },
-  { step: '3', title: 'Read & reflect', body: 'Open threads for full context—not a substitute for pros.' },
+  { step: '1', title: 'Ask', body: 'What you’re dealing with, in your words.' },
+  { step: '2', title: 'Match', body: 'Similar posts by meaning (not keywords only).' },
+  { step: '3', title: 'Read', body: 'Open Reddit for the full thread.' },
 ] as const
 
 type ThemeMode = 'light' | 'dark'
@@ -105,24 +105,24 @@ function ResultCard({ episode }: { episode: Episode }): JSX.Element {
         <div className="score-gauge" style={{ ['--pct' as any]: scorePct ?? 0 }}>
           <div className="score-gauge__ring" aria-hidden="true" />
           <div className="score-gauge__center">
-            <div className="score-gauge__label">Final score</div>
+            <div className="score-gauge__label">Score</div>
             <div className="score-gauge__value">{formatPct(scorePct)}</div>
           </div>
         </div>
 
         <div className="result-card__content">
-          <p className="result-card__summaryLabel">Summary (whole post, extractive)</p>
+          <p className="result-card__summaryLabel">Snippet</p>
           <p className="result-card__desc">{episode.descr}</p>
           {episode.summary_source === 'title_only' || episode.summary_source === 'unavailable' ? (
-            <p className="result-card__fullHint">Post text was removed on Reddit — the link may still show some comments.</p>
+            <p className="result-card__fullHint">Post text removed on Reddit.</p>
           ) : null}
           {episode.summary_source === 'comments' ? (
-            <p className="result-card__fullHint">Summary uses comment text stored in our dataset (not live-fetched).</p>
+            <p className="result-card__fullHint">From saved comments in our data.</p>
           ) : null}
           {episode.summary_source === 'body' &&
           episode.body_full_length !== undefined &&
           episode.body_full_length > (episode.descr?.length ?? 0) + 20 ? (
-            <p className="result-card__fullHint">Full post is longer — open the link for the whole thread.</p>
+            <p className="result-card__fullHint">Longer on Reddit →</p>
           ) : null}
 
           <div className="metric-row" aria-label="Match metrics">
@@ -142,7 +142,7 @@ function ResultCard({ episode }: { episode: Episode }): JSX.Element {
 
           {episode.top_matching_dimensions && episode.top_matching_dimensions.length > 0 ? (
             <details className="dims">
-              <summary className="dims__summary">Top matching semantic dimensions</summary>
+              <summary className="dims__summary">Top dimensions</summary>
               <div className="dims__list">
                 {episode.top_matching_dimensions.map((dim) => (
                   <div key={dim.id} className="dim-row">
@@ -171,7 +171,7 @@ function ResultCard({ episode }: { episode: Episode }): JSX.Element {
 
           {episode.radar_strengths && episode.radar_strengths.length > 0 ? (
             <div className="result-card__radar">
-              <h4 className="result-card__radarTitle">SVD component strengths</h4>
+              <h4 className="result-card__radarTitle">SVD mix (first 10)</h4>
               <div className="result-card__radarChart">
                 <ResponsiveContainer width="100%" height="100%">
                   <RadarChart cx="50%" cy="50%" outerRadius="70%" data={episode.radar_strengths}>
@@ -254,8 +254,6 @@ function App(): JSX.Element {
   const [lastQuery, setLastQuery] = useState<string>('')
   const [heartBursts, setHeartBursts] = useState<HeartBurst[]>([])
   const [theme, setTheme] = useState<ThemeMode>(readStoredTheme)
-  const [filterOptions, setFilterOptions] = useState<FilterOptionsPayload | null>(null)
-  const [filtersOpen, setFiltersOpen] = useState(false)
   const [safeMode, setSafeMode] = useState(false)
   const [blockwords, setBlockwords] = useState('')
   const [searchHistoryBack, setSearchHistoryBack] = useState<SearchSnapshot[]>([])
@@ -263,13 +261,6 @@ function App(): JSX.Element {
 
   useEffect(() => {
     fetch('/api/config').then(r => r.json()).then(data => setUseLlm(data.use_llm))
-  }, [])
-
-  useEffect(() => {
-    fetch('/api/filter-options')
-      .then((r) => r.json())
-      .then((data: FilterOptionsPayload) => setFilterOptions(data))
-      .catch(() => setFilterOptions(null))
   }, [])
 
   useEffect(() => {
@@ -377,6 +368,8 @@ function App(): JSX.Element {
       </div>
 
       <main id="main-content" className="site-main" tabIndex={-1}>
+      <div className="page-layout">
+      <div className="page-layout__hero">
       {/* Search bar (always shown) */}
       <div className="top-text">
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '24px' }}>
@@ -427,9 +420,7 @@ function App(): JSX.Element {
             <span className="girlie-logo__dots" aria-hidden="true">…</span>
           </div>
         </div>
-        <p className="project-subtitle">
-          Relatable relationship advice from real Reddit posts!
-        </p>
+        <p className="project-subtitle">Real Reddit posts, matched by meaning.</p>
 
         <div className="how-it-works" aria-label="How this search works">
           {HOW_IT_WORKS.map((item) => (
@@ -442,122 +433,115 @@ function App(): JSX.Element {
             </div>
           ))}
         </div>
+      </div>
 
-        <div className="search-bar-row">
-          <button
-            type="button"
-            className="search-history-back"
-            onClick={goBackSearch}
-            disabled={searchHistoryBack.length === 0 || isLoading}
-            aria-label="Previous search"
-            title={
-              searchHistoryBack.length === 0
-                ? 'No previous search'
-                : `Back to “${searchHistoryBack[searchHistoryBack.length - 1].query}”`
-            }
-          >
-            <span className="search-history-back__icon" aria-hidden="true">←</span>
-          </button>
-          <div className="input-box" onClick={() => document.getElementById('search-input')?.focus()}>
-            <img src={SearchIcon} alt="search" />
-            <input
-              id="search-input"
-              placeholder="Describe your relationship situation and press Enter"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  void handleSearch(searchTerm)
-                }
-              }}
-            />
-          </div>
-        </div>
-
-        <p className="search-hint" role="note">
-          <kbd className="kbd">Enter</kbd> to search · <span className="search-hint__muted">← returns to your previous topic</span>
-        </p>
-
-        <div className="suggestion-chips" aria-label="Example searches">
-          <span className="suggestion-chips__label">Try:</span>
-          <div className="suggestion-chips__list">
-            {EXAMPLE_SEARCHES.map((phrase) => (
+        <div className="search-and-filters">
+          <div className="search-and-filters__main">
+            <div className="search-bar-row">
               <button
-                key={phrase}
                 type="button"
-                className="suggestion-chip"
-                onClick={() => { void handleSearch(phrase) }}
+                className="search-history-back"
+                onClick={goBackSearch}
+                disabled={searchHistoryBack.length === 0 || isLoading}
+                aria-label="Previous search"
+                title={
+                  searchHistoryBack.length === 0
+                    ? 'No previous search'
+                    : `Back to “${searchHistoryBack[searchHistoryBack.length - 1].query}”`
+                }
               >
-                {phrase}
+                <span className="search-history-back__icon" aria-hidden="true">←</span>
               </button>
-            ))}
-          </div>
-        </div>
-
-        {showLandingWelcome ? (
-          <aside className="landing-panel" aria-label="Tips">
-            <h2 className="landing-panel__title">Before you search</h2>
-            <ul className="landing-panel__list">
-              <li>Be specific—feelings, situation, and what you want help with work best.</li>
-              <li>Results are from a curated dataset; open the Reddit link for the full thread.</li>
-              <li>Use <strong>Filters</strong> below to hide topics or words you don’t want to see.</li>
-            </ul>
-          </aside>
-        ) : null}
-
-        <div className="search-filters">
-          <button
-            type="button"
-            className="search-filters__toggle"
-            aria-expanded={filtersOpen}
-            onClick={() => setFiltersOpen((o) => !o)}
-          >
-            Filters — block words and safe mode
-            <span className="search-filters__chevron" aria-hidden="true">{filtersOpen ? '▴' : '▾'}</span>
-          </button>
-          {filtersOpen && !filterOptions ? (
-            <p className="search-filters__loading">Loading filters…</p>
-          ) : null}
-          {filtersOpen && filterOptions ? (
-            <div className="search-filters__panel">
-              <p className="search-filters__hint">
-                {filterOptions.blockwords_help}{' '}
-                {filterOptions.safe_mode_help}
-              </p>
-
-              <div className="search-filters__row">
-                <span className="search-filters__label">Block words</span>
+              <div className="input-box" onClick={() => document.getElementById('search-input')?.focus()}>
+                <img src={SearchIcon} alt="search" />
                 <input
-                  type="text"
-                  className="search-filters__text"
-                  placeholder="e.g. gambling, drugs, slur phrase here"
-                  value={blockwords}
-                  onChange={(e) => setBlockwords(e.target.value)}
-                  aria-label="Words or phrases to exclude from results"
+                  id="search-input"
+                  placeholder="What’s going on? Press Enter"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      void handleSearch(searchTerm)
+                    }
+                  }}
                 />
               </div>
-
-              <label className="search-filters__check">
-                <input
-                  type="checkbox"
-                  checked={safeMode}
-                  onChange={(e) => setSafeMode(e.target.checked)}
-                />
-                <span>Safe mode — also hide posts that match a built-in adult / explicit term list</span>
-              </label>
-
-              <button
-                type="button"
-                className="search-filters__apply"
-                onClick={() => { if (searchTerm.trim()) void handleSearch(searchTerm) }}
-              >
-                Apply filters to search
-              </button>
             </div>
-          ) : null}
+
+            <p className="search-hint" role="note">
+              <kbd className="kbd">Enter</kbd> · <span className="search-hint__muted">← last search</span>
+            </p>
+
+            <div className="suggestion-chips" aria-label="Example searches">
+              <span className="suggestion-chips__label">Examples</span>
+              <div className="suggestion-chips__list">
+                {EXAMPLE_SEARCHES.map((phrase) => (
+                  <button
+                    key={phrase}
+                    type="button"
+                    className="suggestion-chip"
+                    onClick={() => { void handleSearch(phrase) }}
+                  >
+                    {phrase}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {showLandingWelcome ? (
+              <aside className="landing-panel" aria-label="Tips">
+                <p className="landing-panel__line">
+                  Say what you feel and what you need. Open links for full threads. Use <strong>Filters</strong> to hide words you don’t want.
+                </p>
+              </aside>
+            ) : null}
+          </div>
+
+          <aside className="filters-sidebar" aria-label="Search filters">
+            <div className="filters-sidebar__inner">
+              <h2 className="filters-sidebar__title">Filters</h2>
+              <p className="filters-sidebar__lede">Next search only.</p>
+              <div className="search-filters__panel search-filters__panel--sidebar">
+                <p className="search-filters__hint search-filters__hint--short">
+                  Block list = posts containing any word/phrase are dropped. Safe mode adds a short explicit-term list.
+                </p>
+
+                <div className="search-filters__row search-filters__row--stack">
+                  <span className="search-filters__label">Block</span>
+                  <input
+                    type="text"
+                    className="search-filters__text"
+                    placeholder="word, phrase, …"
+                    title="Separate multiple words or phrases with commas"
+                    value={blockwords}
+                    onChange={(e) => setBlockwords(e.target.value)}
+                    aria-label="Words or phrases to exclude, comma-separated"
+                  />
+                </div>
+
+                <label className="search-filters__check">
+                  <input
+                    type="checkbox"
+                    checked={safeMode}
+                    onChange={(e) => setSafeMode(e.target.checked)}
+                  />
+                  <span>Safe mode (extra explicit-term filter)</span>
+                </label>
+
+                <button
+                  type="button"
+                  className="search-filters__apply"
+                  onClick={() => { if (searchTerm.trim()) void handleSearch(searchTerm) }}
+                >
+                  Apply
+                </button>
+              </div>
+            </div>
+          </aside>
         </div>
       </div>
 
+      <div className="page-layout__content">
       <div className="section-rule-wrap" aria-hidden={!showResultsChrome}>
         <hr className={`section-rule ${showResultsChrome ? 'section-rule--visible' : ''}`} />
       </div>
@@ -573,7 +557,7 @@ function App(): JSX.Element {
       >
         {showResultsChrome ? (
           <h2 className="results-section-heading" id="results-heading">
-            {isLoading ? 'Finding matches…' : episodes.length > 0 ? 'Your matches' : 'No matches yet'}
+            {isLoading ? 'Searching…' : episodes.length > 0 ? 'Results' : 'No hits'}
           </h2>
         ) : null}
         {isLoading ? (
@@ -588,9 +572,9 @@ function App(): JSX.Element {
                 </div>
               </div>
               <div className="loading-copy">
-                <div className="loading-title">Hey girlie… I’m finding your matches</div>
+                <div className="loading-title">Searching…</div>
                 <div className="loading-subtitle">
-                  {lastQuery ? <>Searching posts like “{lastQuery}”</> : <>Preparing results…</>}
+                  {lastQuery ? <>“{lastQuery}”</> : null}
                 </div>
                 <div className="skeleton-row">
                   <div className="skeleton skeleton--pill" />
@@ -626,15 +610,15 @@ function App(): JSX.Element {
           <>
             {episodes.length > 0 && (
               <p className="result-count">
-                Top {episodes.length} matches
+                {episodes.length} results
                 {lastQuery ? (
-                  <span className="result-count__query"> for “{lastQuery}”</span>
+                  <span className="result-count__query"> · “{lastQuery}”</span>
                 ) : null}
               </p>
             )}
             {episodes.length === 0 && lastQuery && !isLoading ? (
               <p className="result-count result-count--empty">
-                No posts matched. Clear block words if you listed very common terms (e.g. “reddit”), turn off safe mode if it is hiding everything, or try a different search.
+                Nothing matched. Try simpler words, loosen block words, or turn off safe mode.
               </p>
             ) : null}
             {episodes.map((episode, index) => (
@@ -647,15 +631,12 @@ function App(): JSX.Element {
       <footer className="site-footer">
         <div className="site-footer__inner">
           <p className="site-footer__brand">Hey Girlie</p>
-          <p className="site-footer__tagline">
-            Explore how others navigated similar feelings—then talk to someone you trust or a professional when you need to.
-          </p>
-          <p className="site-footer__disclaimer">
-            This tool is for discovery only. It is not therapy, legal advice, or crisis support.
-          </p>
-          <p className="site-footer__meta">© {new Date().getFullYear()} · Built for learning &amp; reflection</p>
+          <p className="site-footer__tagline">For browsing only—not therapy or crisis help.</p>
+          <p className="site-footer__meta">© {new Date().getFullYear()}</p>
         </div>
       </footer>
+      </div>
+      </div>
       </main>
 
       {showScrollTop ? (

@@ -4,33 +4,43 @@
   box-sizing: border-box;
 }
 
-/* Light mode (default) */
+/* Light mode (default) — girly palette: shell pink, rose, soft lilac */
 :root {
-  --body-bg: #ffe6f1;
+  --body-bg: #fff0f6;
   --body-bg-gradient: linear-gradient(
-    180deg,
-    rgba(255, 247, 251, 0.85) 0%,
-    rgba(255, 255, 255, 0.55) 55%,
-    rgba(255, 255, 255, 0.75) 100%
+    165deg,
+    rgba(255, 240, 250, 0.98) 0%,
+    rgba(255, 228, 241, 0.92) 35%,
+    rgba(248, 232, 255, 0.55) 70%,
+    rgba(255, 252, 254, 0.9) 100%
   );
-  --body-heart-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='88' height='88' viewBox='0 0 88 88'%3E%3Cpath d='M44 66C26.5 53 18 44.2 18 32.7 18 24.4 24.2 18.2 32.5 18.2c5.6 0 10.5 3.1 13.5 8 3-4.9 7.9-8 13.5-8 8.3 0 14.5 6.2 14.5 14.5C70 44.2 61.5 53 44 66Z' fill='%23ff5aa8' fill-opacity='0.24'/%3E%3Cpath d='M14 16c0-2.4 2-4.4 4.4-4.4 1.6 0 3 0.9 3.8 2.2.8-1.3 2.2-2.2 3.8-2.2 2.4 0 4.4 2 4.4 4.4 0 5.6-8.2 10.4-8.2 10.4S14 21.6 14 16Z' fill='%23b22f74' fill-opacity='0.16'/%3E%3C/svg%3E");
-  --body-text: #1f2937;
+  --body-heart-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='88' height='88' viewBox='0 0 88 88'%3E%3Cpath d='M44 66C26.5 53 18 44.2 18 32.7 18 24.4 24.2 18.2 32.5 18.2c5.6 0 10.5 3.1 13.5 8 3-4.9 7.9-8 13.5-8 8.3 0 14.5 6.2 14.5 14.5C70 44.2 61.5 53 44 66Z' fill='%23ff69b4' fill-opacity='0.2'/%3E%3Cpath d='M14 16c0-2.4 2-4.4 4.4-4.4 1.6 0 3 0.9 3.8 2.2.8-1.3 2.2-2.2 3.8-2.2 2.4 0 4.4 2 4.4 4.4 0 5.6-8.2 10.4-8.2 10.4S14 21.6 14 16Z' fill='%23da70d6' fill-opacity='0.12'/%3E%3C/svg%3E");
+  --body-text: #3d2a38;
+  --girlie-rose: #ff6eb3;
+  --girlie-rose-deep: #e85a9a;
+  --girlie-lilac: #e8d4f5;
+  --girlie-shell: #fff8fb;
+  --font-rounded: 'Quicksand', 'Nunito', system-ui, sans-serif;
 }
 
 html[data-theme='dark'] {
-  --body-bg: #0c0609;
+  --body-bg: #140810;
   --body-bg-gradient: linear-gradient(
-    180deg,
-    rgba(72, 22, 52, 0.92) 0%,
-    rgba(12, 6, 9, 0.98) 55%,
-    rgba(8, 4, 10, 1) 100%
+    165deg,
+    rgba(48, 18, 38, 0.95) 0%,
+    rgba(18, 8, 16, 0.98) 45%,
+    rgba(10, 4, 12, 1) 100%
   );
-  --body-heart-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='88' height='88' viewBox='0 0 88 88'%3E%3Cpath d='M44 66C26.5 53 18 44.2 18 32.7 18 24.4 24.2 18.2 32.5 18.2c5.6 0 10.5 3.1 13.5 8 3-4.9 7.9-8 13.5-8 8.3 0 14.5 6.2 14.5 14.5C70 44.2 61.5 53 44 66Z' fill='%23ff5aa8' fill-opacity='0.09'/%3E%3Cpath d='M14 16c0-2.4 2-4.4 4.4-4.4 1.6 0 3 0.9 3.8 2.2.8-1.3 2.2-2.2 3.8-2.2 2.4 0 4.4 2 4.4 4.4 0 5.6-8.2 10.4-8.2 10.4S14 21.6 14 16Z' fill='%23ff2f93' fill-opacity='0.07'/%3E%3C/svg%3E");
-  --body-text: #e9dfe6;
+  --body-heart-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='88' height='88' viewBox='0 0 88 88'%3E%3Cpath d='M44 66C26.5 53 18 44.2 18 32.7 18 24.4 24.2 18.2 32.5 18.2c5.6 0 10.5 3.1 13.5 8 3-4.9 7.9-8 13.5-8 8.3 0 14.5 6.2 14.5 14.5C70 44.2 61.5 53 44 66Z' fill='%23ff69b4' fill-opacity='0.07'/%3E%3Cpath d='M14 16c0-2.4 2-4.4 4.4-4.4 1.6 0 3 0.9 3.8 2.2.8-1.3 2.2-2.2 3.8-2.2 2.4 0 4.4 2 4.4 4.4 0 5.6-8.2 10.4-8.2 10.4S14 21.6 14 16Z' fill='%23dda0dd' fill-opacity='0.06'/%3E%3C/svg%3E");
+  --body-text: #f3e8ef;
+  --girlie-rose: #ff8ec8;
+  --girlie-rose-deep: #ff6eb3;
+  --girlie-lilac: #6b4d6b;
+  --girlie-shell: #1a1018;
 }
 
 body {
-  font-family: 'Open Sans', sans-serif;
+  font-family: var(--font-rounded);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: var(--body-bg);
@@ -41,7 +51,33 @@ body {
   transition: background-color 0.35s ease, color 0.25s ease;
 }
 
+/* Soft pink / lilac glow blobs (girly atmosphere) */
 #root {
   width: 100%;
   min-height: 100vh;
+  position: relative;
+  isolation: isolate;
+}
+
+#root::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 90% 45% at 50% -15%, rgba(255, 182, 220, 0.45), transparent 55%),
+    radial-gradient(ellipse 50% 35% at 95% 30%, rgba(230, 200, 255, 0.22), transparent 50%),
+    radial-gradient(ellipse 40% 30% at 5% 60%, rgba(255, 200, 230, 0.18), transparent 45%);
+}
+
+html[data-theme='dark'] #root::before {
+  background:
+    radial-gradient(ellipse 80% 40% at 50% -10%, rgba(255, 100, 160, 0.12), transparent 55%),
+    radial-gradient(ellipse 45% 35% at 100% 25%, rgba(140, 80, 140, 0.15), transparent 50%);
+}
+
+#root > * {
+  position: relative;
+  z-index: 1;
 }
