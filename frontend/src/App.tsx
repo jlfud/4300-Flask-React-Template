@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react'
 import './App.css'
 import SearchIcon from './assets/mag.png'
 import { Episode } from './types'
-import Chat from './Chat'
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip } from 'recharts'
 
 type HeartBurst = {
@@ -258,6 +257,9 @@ function App(): JSX.Element {
   const [blockwords, setBlockwords] = useState('')
   const [searchHistoryBack, setSearchHistoryBack] = useState<SearchSnapshot[]>([])
   const [showScrollTop, setShowScrollTop] = useState(false)
+  const [aiMode, setAiMode] = useState(false)
+  const [aiSummary, setAiSummary] = useState<string | null>(null)
+  const [isLlmLoading, setIsLlmLoading] = useState(false)
 
   useEffect(() => {
     fetch('/api/config').then(r => r.json()).then(data => setUseLlm(data.use_llm))
@@ -330,14 +332,73 @@ function App(): JSX.Element {
     }
     setLastQuery(q)
     setIsLoading(true)
+    setAiSummary(null)
+    
+    // Setup for AI mode
+    if (aiMode) {
+      setIsLlmLoading(true)
+    }
+
     try {
       const url = buildEpisodesUrl(q, {
         safeMode,
         blockwords,
       })
+      
+      const filters = {
+        safe_mode: safeMode,
+        extra_block_words: blockwords ? blockwords.split(',').map(s => s.trim()) : []
+      }
+
+      // Fetch IR results
       const response = await fetch(url)
       const data: Episode[] = await response.json()
       setEpisodes(data)
+
+      // Fetch LLM results if aiMode is on
+      if (aiMode) {
+        setAiSummary('')
+        fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: q, filters })
+        }).then(async (chatRes) => {
+          if (!chatRes.ok || !chatRes.body) {
+            setAiSummary('Error generating summary.')
+            setIsLlmLoading(false)
+            return
+          }
+          const reader = chatRes.body.getReader()
+          const decoder = new TextDecoder()
+          let buffer = ''
+          let generatedSoFar = ''
+          while (true) {
+            const { done, value } = await reader.read()
+            if (done) break
+            buffer += decoder.decode(value, { stream: true })
+            const lines = buffer.split('\n')
+            buffer = lines.pop() ?? ''
+            for (const line of lines) {
+              if (line.startsWith('data: ')) {
+                try {
+                  const chunk = JSON.parse(line.slice(6))
+                  if (chunk.content) {
+                    generatedSoFar += chunk.content
+                    setAiSummary(generatedSoFar)
+                  }
+                  if (chunk.error) {
+                    setAiSummary(prev => (prev || '') + '\n[Error: ' + chunk.error + ']')
+                  }
+                } catch { /* ignore */ }
+              }
+            }
+          }
+        }).catch(() => {
+          setAiSummary('Error connecting to AI service.')
+        }).finally(() => {
+          setIsLlmLoading(false)
+        })
+      }
     } finally {
       setIsLoading(false)
     }
@@ -527,6 +588,17 @@ function App(): JSX.Element {
                   />
                   <span>Safe mode (extra explicit-term filter)</span>
                 </label>
+                
+                {useLlm && (
+                  <label className="search-filters__check">
+                    <input
+                      type="checkbox"
+                      checked={aiMode}
+                      onChange={(e) => setAiMode(e.target.checked)}
+                    />
+                    <span>AI Summary Mode</span>
+                  </label>
+                )}
 
                 <button
                   type="button"
@@ -608,6 +680,23 @@ function App(): JSX.Element {
           </>
         ) : (
           <>
+            {/* The AI Summary section */}
+            {(aiMode && (isLlmLoading || aiSummary)) ? (
+              <div className="result-card result-card--ai">
+                <div className="result-card__top">
+                  <h3 className="result-card__title">✨ AI Advice Summary</h3>
+                </div>
+                <div className="result-card__body">
+                  <div className="result-card__content">
+                    <p style={{ whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>
+                      {aiSummary}
+                      {isLlmLoading && <span className="loading-dot" style={{ display: 'inline-block', width: '8px', height: '8px', background: 'currentColor', borderRadius: '50%', marginLeft: '4px', animation: 'pulse 1s infinite alternate' }} />}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
             {episodes.length > 0 && (
               <p className="result-count">
                 {episodes.length} results
@@ -642,16 +731,13 @@ function App(): JSX.Element {
       {showScrollTop ? (
         <button
           type="button"
-          className={`scroll-top-btn${useLlm ? ' scroll-top-btn--with-chat' : ''}`}
+          className="scroll-top-btn"
           onClick={scrollToTop}
           aria-label="Back to top"
         >
           <span aria-hidden="true">↑</span>
         </button>
       ) : null}
-
-      {/* Chat (only when USE_LLM = True in routes.py) */}
-      {useLlm && <Chat onSearchTerm={handleSearch} />}
     </div>
   )
 }
