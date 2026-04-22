@@ -84,6 +84,11 @@
   align-items: stretch;
 }
 
+/* Prevent hero cards from visually crowding the search row */
+.search-and-filters {
+  margin-top: 14px;
+}
+
 .search-and-filters__main {
   width: 100%;
   min-width: 0;
@@ -107,7 +112,9 @@
     gap: 20px 36px;
     align-items: start;
     justify-items: stretch;
+    justify-content: center;
     margin-top: 4px;
+    transform: translateX(140px);
   }
 
   .search-and-filters__main {
@@ -125,6 +132,20 @@
     justify-self: center;
     width: 100%;
     max-width: 300px;
+  }
+
+  /* Nudge the “Examples” + tip text right without moving the search bar */
+  .search-and-filters__main .search-hint,
+  .search-and-filters__main .suggestion-chips {
+    padding-left: 56px;
+    box-sizing: border-box;
+  }
+
+  /* Keep the dotted “Say what you feel…” bubble directly under Examples */
+  .search-and-filters__main .landing-panel {
+    margin-left: 56px;
+    width: calc(100% - 56px);
+    margin-top: 12px;
   }
 }
 
@@ -209,7 +230,7 @@
   gap: 10px;
   width: 100%;
   max-width: 640px;
-  margin-bottom: 18px;
+  margin-bottom: 28px;
 }
 
 .how-it-works__card {
@@ -370,6 +391,7 @@
   font-size: 0.8rem;
   line-height: 1.5;
   color: #5f6368;
+  text-align: center;
 }
 
 /* ── Section rule & results heading ─────────────────────────────────────────── */
@@ -790,6 +812,11 @@
   background: transparent;
 }
 
+/* Remove default blue focus rings; use pink focus instead */
+.input-box input:focus-visible {
+  outline: none;
+}
+
 /* ── Search filters (metadata + safe mode) ───────────────────────────────── */
 
 .search-filters__loading {
@@ -924,6 +951,20 @@
   font-size: 0.88rem;
 }
 
+.search-filters__text:focus,
+.search-filters__text:focus-visible {
+  outline: none;
+  border-color: rgba(255, 90, 168, 0.62);
+  box-shadow: 0 0 0 4px rgba(255, 90, 168, 0.16);
+}
+
+.search-filters__check input:focus,
+.search-filters__check input:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(255, 90, 168, 0.16);
+  border-radius: 4px;
+}
+
 .search-filters__apply {
   margin-top: 6px;
   width: 100%;
@@ -1001,6 +1042,12 @@ html[data-theme='dark'] .search-filters__text {
   background: rgba(18, 10, 20, 0.55);
   border-color: rgba(255, 90, 168, 0.25);
   color: #f0e6f0;
+}
+
+html[data-theme='dark'] .search-filters__text:focus,
+html[data-theme='dark'] .search-filters__text:focus-visible {
+  border-color: rgba(255, 120, 200, 0.75);
+  box-shadow: 0 0 0 4px rgba(255, 90, 168, 0.2);
 }
 
 html[data-theme='dark'] .search-filters__apply {
