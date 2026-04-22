@@ -413,6 +413,7 @@ function App(): JSX.Element {
 
   const showResultsChrome = isLoading || episodes.length > 0 || Boolean(lastQuery)
   const showLandingWelcome = !lastQuery && !isLoading && episodes.length === 0
+  const showAiPanel = aiMode && (isLlmLoading || Boolean(aiSummary))
 
   return (
     <div className={`full-body-container ${useLlm ? 'llm-mode' : ''}`}>
@@ -502,6 +503,28 @@ function App(): JSX.Element {
       </div>
 
         <div className="search-and-filters">
+          {showAiPanel ? (
+            <aside className="ai-sidebar" aria-label="AI summary">
+              <div className="ai-sidebar__inner">
+                <div className="result-card result-card--ai">
+                  <div className="result-card__top">
+                    <h3 className="result-card__title">✨ AI Advice Summary</h3>
+                  </div>
+                  <div className="result-card__body">
+                    <div className="result-card__content">
+                      <p className="ai-panel__text">
+                        {aiSummary}
+                        {isLlmLoading ? <span className="ai-panel__dot" aria-hidden="true" /> : null}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </aside>
+          ) : (
+            <div className="ai-sidebar ai-sidebar--empty" aria-hidden="true" />
+          )}
+
           <div className="search-and-filters__main">
             <div className="search-bar-row">
               <button
@@ -561,154 +584,141 @@ function App(): JSX.Element {
                 </p>
               </aside>
             ) : null}
-          </div>
-      <div className="page-layout__content">
-      <div className="section-rule-wrap" aria-hidden={!showResultsChrome}>
-        <hr className={`section-rule ${showResultsChrome ? 'section-rule--visible' : ''}`} />
-      </div>
 
-      {/* Search results (always shown) */}
-      <div
-        id="answer-box"
-        className="answer-box-region"
-        role="region"
-        aria-label="Search results"
-        aria-live="polite"
-        aria-busy={isLoading}
-      >
-        {showResultsChrome ? (
-          <h2 className="results-section-heading" id="results-heading">
-            {isLoading ? 'Searching…' : episodes.length > 0 ? 'Results' : 'No hits'}
-          </h2>
-        ) : null}
-        {isLoading ? (
-          <>
-            <div className="loading-card">
-              <div className="loading-mascot" aria-hidden="true">
-                <div className="loading-mascot__shadow" />
-                <div className="loading-mascot__body loading-mascot__body--spin">
-                  <div className="loading-mascot__spark loading-mascot__spark--a" />
-                  <div className="loading-mascot__spark loading-mascot__spark--b" />
-                  <div className="loading-mascot__spark loading-mascot__spark--c" />
-                </div>
-              </div>
-              <div className="loading-copy">
-                <div className="loading-title">Searching…</div>
-                <div className="loading-subtitle">
-                  {lastQuery ? <>“{lastQuery}”</> : null}
-                </div>
-                <div className="skeleton-row">
-                  <div className="skeleton skeleton--pill" />
-                  <div className="skeleton skeleton--pill" />
-                  <div className="skeleton skeleton--pill" />
-                </div>
-                <div className="skeleton skeleton--line" />
-                <div className="skeleton skeleton--line skeleton--line2" />
-              </div>
-            </div>
+            {/* Search results live under Examples */}
+            <div
+              id="answer-box"
+              className="answer-box-region"
+              role="region"
+              aria-label="Search results"
+              aria-live="polite"
+              aria-busy={isLoading}
+            >
+              {showResultsChrome ? (
+                <h2 className="results-section-heading" id="results-heading">
+                  {isLoading ? 'Searching…' : episodes.length > 0 ? 'Results' : 'No hits'}
+                </h2>
+              ) : null}
 
-            <div className="skeleton-cards">
-              {[0, 1].map((i) => (
-                <div key={i} className="result-card result-card--skeleton">
-                  <div className="skeleton skeleton--title" />
-                  <div className="result-card__body">
-                    <div className="skeleton skeleton--gauge" />
-                    <div>
-                      <div className="skeleton skeleton--line" />
-                      <div className="skeleton skeleton--line skeleton--line2" />
+              {isLoading ? (
+                <>
+                  <div className="loading-card">
+                    <div className="loading-mascot" aria-hidden="true">
+                      <div className="loading-mascot__shadow" />
+                      <div className="loading-mascot__body loading-mascot__body--spin">
+                        <div className="loading-mascot__spark loading-mascot__spark--a" />
+                        <div className="loading-mascot__spark loading-mascot__spark--b" />
+                        <div className="loading-mascot__spark loading-mascot__spark--c" />
+                      </div>
+                    </div>
+                    <div className="loading-copy">
+                      <div className="loading-title">Searching…</div>
+                      <div className="loading-subtitle">
+                        {lastQuery ? <>“{lastQuery}”</> : null}
+                      </div>
                       <div className="skeleton-row">
                         <div className="skeleton skeleton--pill" />
                         <div className="skeleton skeleton--pill" />
                         <div className="skeleton skeleton--pill" />
                       </div>
+                      <div className="skeleton skeleton--line" />
+                      <div className="skeleton skeleton--line skeleton--line2" />
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          </>
-        ) : (
-          <>
-            {/* Query Radar Chart */}
-            {queryRadar && queryRadar.length > 0 ? (
-              <div className="result-card result-card--query-radar">
-                <div className="result-card__top" style={{ justifyContent: 'center' }}>
-                  <h3 className="result-card__title">Query Semantic Map</h3>
-                </div>
-                <div className="result-card__body" style={{ flexDirection: 'column', alignItems: 'center' }}>
-                  <p className="result-card__desc" style={{ textAlign: 'center', marginBottom: '12px' }}>
-                    Dimensions activated by your search phrase: <br /> <strong>“{lastQuery}”</strong>
-                  </p>
-                  <div className="result-card__radarChart" style={{ width: '100%', height: '280px', maxWidth: '400px' }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <RadarChart cx="50%" cy="50%" outerRadius="70%" data={queryRadar}>
-                        <PolarGrid />
-                        <PolarAngleAxis dataKey="name" tick={{ fontSize: 10, fill: '#7a4a62' }} />
-                        <PolarRadiusAxis angle={30} domain={[0, 1]} tick={{ fontSize: 9 }} />
-                        <Radar
-                          name="Query Match"
-                          dataKey="value"
-                          stroke="#c084fc"
-                          fill="#c084fc"
-                          fillOpacity={0.35}
-                          strokeWidth={2}
-                        />
-                        <Tooltip
-                          formatter={(value) => typeof value === 'number' ? value.toFixed(3) : String(value ?? '')}
-                          contentStyle={{ borderRadius: '10px', fontSize: '12px' }}
-                        />
-                      </RadarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-              </div>
-            ) : null}
 
-            {/* The AI Summary section */}
-            {(aiMode && (isLlmLoading || aiSummary)) ? (
-              <div className="result-card result-card--ai">
-                <div className="result-card__top">
-                  <h3 className="result-card__title">✨ AI Advice Summary</h3>
-                </div>
-                <div className="result-card__body">
-                  <div className="result-card__content">
-                    <p style={{ whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>
-                      {aiSummary}
-                      {isLlmLoading && <span className="loading-dot" style={{ display: 'inline-block', width: '8px', height: '8px', background: 'currentColor', borderRadius: '50%', marginLeft: '4px', animation: 'pulse 1s infinite alternate' }} />}
+                  <div className="skeleton-cards">
+                    {[0, 1].map((i) => (
+                      <div key={i} className="result-card result-card--skeleton">
+                        <div className="skeleton skeleton--title" />
+                        <div className="result-card__body">
+                          <div className="skeleton skeleton--gauge" />
+                          <div>
+                            <div className="skeleton skeleton--line" />
+                            <div className="skeleton skeleton--line skeleton--line2" />
+                            <div className="skeleton-row">
+                              <div className="skeleton skeleton--pill" />
+                              <div className="skeleton skeleton--pill" />
+                              <div className="skeleton skeleton--pill" />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <>
+                  {queryRadar && queryRadar.length > 0 ? (
+                    <div className="result-card">
+                      <div className="result-card__top" style={{ justifyContent: 'center' }}>
+                        <h3 className="result-card__title">Query latent dimensions (SVD)</h3>
+                      </div>
+                      <div className="result-card__body" style={{ gridTemplateColumns: '1fr' }}>
+                        <p className="result-card__desc" style={{ textAlign: 'center', marginBottom: '10px' }}>
+                          Your query: <strong>“{lastQuery}”</strong>
+                        </p>
+                        <div
+                          className="result-card__radarChart"
+                          style={{ width: '100%', height: '260px', maxWidth: '420px', margin: '0 auto' }}
+                        >
+                          <ResponsiveContainer width="100%" height="100%">
+                            <RadarChart cx="50%" cy="50%" outerRadius="70%" data={queryRadar}>
+                              <PolarGrid />
+                              <PolarAngleAxis dataKey="name" tick={{ fontSize: 10, fill: '#7a4a62' }} />
+                              <PolarRadiusAxis angle={30} domain={[0, 1]} tick={{ fontSize: 9 }} />
+                              <Radar
+                                name="Query"
+                                dataKey="value"
+                                stroke="#c084fc"
+                                fill="#c084fc"
+                                fillOpacity={0.32}
+                                strokeWidth={2}
+                              />
+                              <Tooltip
+                                formatter={(value) =>
+                                  typeof value === 'number' ? value.toFixed(3) : String(value ?? '')
+                                }
+                                contentStyle={{ borderRadius: '10px', fontSize: '12px' }}
+                              />
+                            </RadarChart>
+                          </ResponsiveContainer>
+                        </div>
+
+                        <div className="metric-row" aria-label="Top query dimensions">
+                          {[...queryRadar]
+                            .sort((a, b) => b.value - a.value)
+                            .slice(0, 5)
+                            .map((d) => (
+                              <div key={d.name} className="metric-pill">
+                                <div className="metric-pill__k">{d.name}</div>
+                                <div className="metric-pill__v">{formatNum(d.value, 3)}</div>
+                              </div>
+                            ))}
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {episodes.length > 0 && (
+                    <p className="result-count">
+                      {episodes.length} results
+                      {lastQuery ? (
+                        <span className="result-count__query"> · “{lastQuery}”</span>
+                      ) : null}
                     </p>
-                  </div>
-                </div>
-              </div>
-            ) : null}
-
-            {episodes.length > 0 && (
-              <p className="result-count">
-                {episodes.length} results
-                {lastQuery ? (
-                  <span className="result-count__query"> · “{lastQuery}”</span>
-                ) : null}
-              </p>
-            )}
-            {episodes.length === 0 && lastQuery && !isLoading ? (
-              <p className="result-count result-count--empty">
-                Nothing matched. Try simpler words, loosen block words, or turn off safe mode.
-              </p>
-            ) : null}
-            {episodes.map((episode, index) => (
-              <ResultCard key={`${episode.rank ?? index}-${episode.title}`} episode={episode} />
-            ))}
-          </>
-        )}
-      </div>
-
-      <footer className="site-footer">
-        <div className="site-footer__inner">
-          <p className="site-footer__brand">Hey Girlie</p>
-          <p className="site-footer__tagline">For browsing only—not therapy or crisis help.</p>
-          <p className="site-footer__meta">© {new Date().getFullYear()}</p>
-        </div>
-      </footer>
-      </div>
+                  )}
+                  {episodes.length === 0 && lastQuery && !isLoading ? (
+                    <p className="result-count result-count--empty">
+                      Nothing matched. Try simpler words, loosen block words, or turn off safe mode.
+                    </p>
+                  ) : null}
+                  {episodes.map((episode, index) => (
+                    <ResultCard key={`${episode.rank ?? index}-${episode.title}`} episode={episode} />
+                  ))}
+                </>
+              )}
+            </div>
+          </div>
 
           <aside className="filters-sidebar" aria-label="Search filters">
             <div className="filters-sidebar__inner">
@@ -765,6 +775,15 @@ function App(): JSX.Element {
         </div>
       </div>
 
+      <div className="page-layout__content">
+        <footer className="site-footer">
+          <div className="site-footer__inner">
+            <p className="site-footer__brand">Hey Girlie</p>
+            <p className="site-footer__tagline">For browsing only—not therapy or crisis help.</p>
+            <p className="site-footer__meta">© {new Date().getFullYear()}</p>
+          </div>
+        </footer>
+      </div>
       </div>
       </main>
 

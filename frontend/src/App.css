@@ -74,7 +74,7 @@
 /* Search + filters: side-by-side on desktop, aligned with search row */
 .search-and-filters {
   width: 100%;
-  max-width: 1100px;
+  max-width: 1400px;
   margin: 8px auto 0;
   padding: 0 12px;
   box-sizing: border-box;
@@ -108,17 +108,26 @@
 @media (min-width: 960px) {
   .search-and-filters {
     display: grid;
-    grid-template-columns: minmax(320px, 1fr) minmax(260px, 320px);
-    gap: 20px 36px;
+    grid-template-columns: minmax(260px, 360px) minmax(680px, 820px) minmax(260px, 320px);
+    gap: 20px 24px;
     align-items: start;
     justify-items: stretch;
     justify-content: center;
     margin-top: 4px;
-    transform: translateX(140px);
+    grid-template-areas: "ai main filters";
   }
 
   .search-and-filters__main {
+    grid-area: main;
     align-items: stretch;
+  }
+
+  .filters-sidebar {
+    grid-area: filters;
+  }
+
+  .ai-sidebar {
+    grid-area: ai;
   }
 
   .search-and-filters__main .search-bar-row,
@@ -147,6 +156,47 @@
     width: calc(100% - 56px);
     margin-top: 12px;
   }
+}
+
+.ai-sidebar {
+  width: 100%;
+}
+
+.ai-sidebar--empty {
+  pointer-events: none;
+}
+
+.ai-sidebar__inner {
+  position: relative;
+}
+
+@media (min-width: 960px) {
+  .ai-sidebar__inner {
+    position: sticky;
+    top: 88px;
+    max-height: calc(100vh - 104px);
+    overflow-y: auto;
+  }
+}
+
+/* Keep AI summary compact + scrollable */
+.ai-sidebar .result-card--ai {
+  max-height: 56vh;
+  overflow: hidden;
+}
+
+.ai-sidebar .result-card--ai .result-card__body {
+  display: block;
+}
+
+.ai-sidebar .result-card--ai .result-card__content {
+  max-height: calc(56vh - 72px);
+  overflow: auto;
+  padding-right: 6px; /* room for scrollbar */
+}
+
+.ai-sidebar .result-card--ai .result-card__title {
+  font-size: 1.05rem;
 }
 
 .filters-sidebar {
@@ -1062,7 +1112,7 @@ html[data-theme='dark'] .result-card__filterMeta {
 /* ── Search results ────────────────────────────────────────────────────────── */
 
 #answer-box {
-  width: 700px;
+  width: 100%;
   max-width: 100%;
   display: flex;
   flex-direction: column;
@@ -1632,12 +1682,29 @@ details[open] > .dims__summary::after { content: '▴'; }
   100% { background-position: 200% 0; }
 }
 
-/* ── LLM mode: constrain answer-box so chat gets space ────────────────────── */
+/* ── LLM mode ─────────────────────────────────────────────────────────────── */
+/* Results should remain fully readable (no artificial max-height). */
 
-.llm-mode #answer-box {
-  max-height: 250px;
-  overflow-y: auto;
-  flex-shrink: 0;
+.ai-panel__text {
+  white-space: pre-wrap;
+  line-height: 1.6;
+  margin: 0;
+  font-size: 0.92rem;
+}
+
+.ai-panel__dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: currentColor;
+  border-radius: 50%;
+  margin-left: 4px;
+  animation: pulse 1s infinite alternate;
+}
+
+@keyframes pulse {
+  from { opacity: 0.35; transform: translateY(0); }
+  to { opacity: 1; transform: translateY(-1px); }
 }
 
 /* ── Chat messages ─────────────────────────────────────────────────────────── */
