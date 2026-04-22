@@ -30,3 +30,11 @@ export interface FilterOptionsPayload {
   safe_mode_help: string;
   blockwords_help: string;
 }
+
+export interface SearchResponse {
+  episodes: Episode[];
+  query_radar: {
+    name: string;
+    value: number;
+  }[];
+}

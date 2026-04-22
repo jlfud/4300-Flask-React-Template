@@ -41,7 +41,8 @@ def register_chat_route(app, json_search):
         client = LLMClient(api_key=api_key)
 
         # Retrieve IR results
-        episodes = json_search(user_message, filters=filters)
+        search_result = json_search(user_message, filters=filters)
+        episodes = search_result.get("episodes", [])
         
         # Build context from the top 5 results to avoid context overflow, although the model can probably handle 10. Let's use 5 for focus.
         context_text = "\n\n---\n\n".join(

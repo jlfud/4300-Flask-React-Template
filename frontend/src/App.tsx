@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import './App.css'
 import SearchIcon from './assets/mag.png'
-import { Episode } from './types'
+import { Episode, SearchResponse } from './types'
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip } from 'recharts'
 
 type HeartBurst = {
@@ -62,6 +62,7 @@ function formatNum(n: number | undefined, digits = 2): string {
 type SearchSnapshot = {
   query: string
   episodes: Episode[]
+  queryRadar: {name: string, value: number}[] | null
 }
 
 function buildEpisodesUrl(title: string, f: {
@@ -260,6 +261,7 @@ function App(): JSX.Element {
   const [aiMode, setAiMode] = useState(false)
   const [aiSummary, setAiSummary] = useState<string | null>(null)
   const [isLlmLoading, setIsLlmLoading] = useState(false)
+  const [queryRadar, setQueryRadar] = useState<{name: string, value: number}[] | null>(null)
 
   useEffect(() => {
     fetch('/api/config').then(r => r.json()).then(data => setUseLlm(data.use_llm))
@@ -316,6 +318,7 @@ function App(): JSX.Element {
     setSearchTerm(snap.query)
     setLastQuery(snap.query)
     setEpisodes(snap.episodes)
+    setQueryRadar(snap.queryRadar)
   }
 
   const handleSearch = async (value: string): Promise<void> => {
@@ -328,11 +331,12 @@ function App(): JSX.Element {
     }
     const prevQ = lastQuery.trim()
     if (prevQ !== '' && prevQ !== q) {
-      setSearchHistoryBack((h) => [...h, { query: lastQuery, episodes: [...episodes] }])
+      setSearchHistoryBack((h) => [...h, { query: lastQuery, episodes: [...episodes], queryRadar }])
     }
     setLastQuery(q)
     setIsLoading(true)
     setAiSummary(null)
+    setQueryRadar(null)
     
     // Setup for AI mode
     if (aiMode) {
@@ -352,8 +356,9 @@ function App(): JSX.Element {
 
       // Fetch IR results
       const response = await fetch(url)
-      const data: Episode[] = await response.json()
-      setEpisodes(data)
+      const data: SearchResponse = await response.json()
+      setEpisodes(data.episodes)
+      setQueryRadar(data.query_radar)
 
       // Fetch LLM results if aiMode is on
       if (aiMode) {
@@ -557,62 +562,6 @@ function App(): JSX.Element {
               </aside>
             ) : null}
           </div>
-
-          <aside className="filters-sidebar" aria-label="Search filters">
-            <div className="filters-sidebar__inner">
-              <h2 className="filters-sidebar__title">Filters</h2>
-              <p className="filters-sidebar__lede">Next search only.</p>
-              <div className="search-filters__panel search-filters__panel--sidebar">
-                <p className="search-filters__hint search-filters__hint--short">
-                  Block list = posts containing any word/phrase are dropped. Safe mode adds a short explicit-term list.
-                </p>
-
-                <div className="search-filters__row search-filters__row--stack">
-                  <span className="search-filters__label">Block</span>
-                  <input
-                    type="text"
-                    className="search-filters__text"
-                    placeholder="word, phrase, …"
-                    title="Separate multiple words or phrases with commas"
-                    value={blockwords}
-                    onChange={(e) => setBlockwords(e.target.value)}
-                    aria-label="Words or phrases to exclude, comma-separated"
-                  />
-                </div>
-
-                <label className="search-filters__check">
-                  <input
-                    type="checkbox"
-                    checked={safeMode}
-                    onChange={(e) => setSafeMode(e.target.checked)}
-                  />
-                  <span>Safe mode (extra explicit-term filter)</span>
-                </label>
-                
-                {useLlm && (
-                  <label className="search-filters__check">
-                    <input
-                      type="checkbox"
-                      checked={aiMode}
-                      onChange={(e) => setAiMode(e.target.checked)}
-                    />
-                    <span>AI Summary Mode</span>
-                  </label>
-                )}
-
-                <button
-                  type="button"
-                  className="search-filters__apply"
-                  onClick={() => { if (searchTerm.trim()) void handleSearch(searchTerm) }}
-                >
-                  Apply
-                </button>
-              </div>
-            </div>
-          </aside>
-        </div>
-      </div>
-
       <div className="page-layout__content">
       <div className="section-rule-wrap" aria-hidden={!showResultsChrome}>
         <hr className={`section-rule ${showResultsChrome ? 'section-rule--visible' : ''}`} />
@@ -680,6 +629,41 @@ function App(): JSX.Element {
           </>
         ) : (
           <>
+            {/* Query Radar Chart */}
+            {queryRadar && queryRadar.length > 0 ? (
+              <div className="result-card result-card--query-radar">
+                <div className="result-card__top" style={{ justifyContent: 'center' }}>
+                  <h3 className="result-card__title">Query Semantic Map</h3>
+                </div>
+                <div className="result-card__body" style={{ flexDirection: 'column', alignItems: 'center' }}>
+                  <p className="result-card__desc" style={{ textAlign: 'center', marginBottom: '12px' }}>
+                    Dimensions activated by your search phrase: <br /> <strong>“{lastQuery}”</strong>
+                  </p>
+                  <div className="result-card__radarChart" style={{ width: '100%', height: '280px', maxWidth: '400px' }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <RadarChart cx="50%" cy="50%" outerRadius="70%" data={queryRadar}>
+                        <PolarGrid />
+                        <PolarAngleAxis dataKey="name" tick={{ fontSize: 10, fill: '#7a4a62' }} />
+                        <PolarRadiusAxis angle={30} domain={[0, 1]} tick={{ fontSize: 9 }} />
+                        <Radar
+                          name="Query Match"
+                          dataKey="value"
+                          stroke="#c084fc"
+                          fill="#c084fc"
+                          fillOpacity={0.35}
+                          strokeWidth={2}
+                        />
+                        <Tooltip
+                          formatter={(value) => typeof value === 'number' ? value.toFixed(3) : String(value ?? '')}
+                          contentStyle={{ borderRadius: '10px', fontSize: '12px' }}
+                        />
+                      </RadarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
             {/* The AI Summary section */}
             {(aiMode && (isLlmLoading || aiSummary)) ? (
               <div className="result-card result-card--ai">
@@ -725,6 +709,62 @@ function App(): JSX.Element {
         </div>
       </footer>
       </div>
+
+          <aside className="filters-sidebar" aria-label="Search filters">
+            <div className="filters-sidebar__inner">
+              <h2 className="filters-sidebar__title">Filters</h2>
+              <p className="filters-sidebar__lede">Next search only.</p>
+              <div className="search-filters__panel search-filters__panel--sidebar">
+                <p className="search-filters__hint search-filters__hint--short">
+                  Block list = posts containing any word/phrase are dropped. Safe mode adds a short explicit-term list.
+                </p>
+
+                <div className="search-filters__row search-filters__row--stack">
+                  <span className="search-filters__label">Block</span>
+                  <input
+                    type="text"
+                    className="search-filters__text"
+                    placeholder="word, phrase, …"
+                    title="Separate multiple words or phrases with commas"
+                    value={blockwords}
+                    onChange={(e) => setBlockwords(e.target.value)}
+                    aria-label="Words or phrases to exclude, comma-separated"
+                  />
+                </div>
+
+                <label className="search-filters__check">
+                  <input
+                    type="checkbox"
+                    checked={safeMode}
+                    onChange={(e) => setSafeMode(e.target.checked)}
+                  />
+                  <span>Safe mode (extra explicit-term filter)</span>
+                </label>
+                
+                {useLlm && (
+                  <label className="search-filters__check">
+                    <input
+                      type="checkbox"
+                      checked={aiMode}
+                      onChange={(e) => setAiMode(e.target.checked)}
+                    />
+                    <span>AI Summary Mode</span>
+                  </label>
+                )}
+
+                <button
+                  type="button"
+                  className="search-filters__apply"
+                  onClick={() => { if (searchTerm.trim()) void handleSearch(searchTerm) }}
+                >
+                  Apply
+                </button>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+
       </div>
       </main>
 

@@ -439,6 +439,17 @@ def json_search(query, filters=None):
         "Physical Intimacy", "Friendzone", "Confusion", "Family",
     ]
 
+    q_strengths = np.abs(query_vec[0][:10])
+    if np.max(q_strengths) > 0:
+        q_strengths = q_strengths / np.max(q_strengths)
+
+    query_radar_strengths = []
+    for i in range(10):
+        query_radar_strengths.append({
+            "name": dim_names[i],
+            "value": round(float(q_strengths[i]), 4),
+        })
+
     for idx in top_indices:
         row_data = df.iloc[idx]
         sim_score = float(sims[idx])
@@ -556,7 +567,10 @@ def json_search(query, filters=None):
     for rank, row in enumerate(top_rows, start=1):
         row["rank"] = rank
 
-    return top_rows
+    return {
+        "episodes": top_rows,
+        "query_radar": query_radar_strengths
+    }
 
 
 def register_routes(app):
