@@ -414,6 +414,12 @@ function App(): JSX.Element {
   const showResultsChrome = isLoading || episodes.length > 0 || Boolean(lastQuery)
   const showLandingWelcome = !lastQuery && !isLoading && episodes.length === 0
   const showAiPanel = aiMode && (isLlmLoading || Boolean(aiSummary))
+  const hasActiveFilters = safeMode || Boolean(blockwords.trim())
+
+  const clearFilters = (): void => {
+    setSafeMode(false)
+    setBlockwords('')
+  }
 
   return (
     <div className={`full-body-container ${useLlm ? 'llm-mode' : ''}`}>
@@ -580,8 +586,13 @@ function App(): JSX.Element {
             {showLandingWelcome ? (
               <aside className="landing-panel" aria-label="Tips">
                 <p className="landing-panel__line">
-                  Say what you feel and what you need. Open links for full threads. Use <strong>Filters</strong> to hide words you don’t want.
+                  Say what you feel and what you need. Open links for full threads. Use <strong>Filters</strong> to hide words.
                 </p>
+                <div className="landing-panel__fineprint" aria-label="Site note">
+                  <p className="landing-panel__fineprintLine">Hey Girlie</p>
+                  <p className="landing-panel__fineprintLine">For browsing only—not therapy or crisis help.</p>
+                  <p className="landing-panel__fineprintLine">© {new Date().getFullYear()}</p>
+                </div>
               </aside>
             ) : null}
 
@@ -594,6 +605,42 @@ function App(): JSX.Element {
               aria-live="polite"
               aria-busy={isLoading}
             >
+              {showResultsChrome && hasActiveFilters ? (
+                <div className="active-filters" role="group" aria-label="Active filters">
+                  <span className="active-filters__label">Active filters</span>
+                  <div className="active-filters__chips">
+                    {safeMode ? (
+                      <button
+                        type="button"
+                        className="active-filters__chip"
+                        onClick={() => setSafeMode(false)}
+                        aria-label="Remove safe mode filter"
+                      >
+                        Safe mode <span aria-hidden="true">×</span>
+                      </button>
+                    ) : null}
+                    {blockwords.trim() ? (
+                      <button
+                        type="button"
+                        className="active-filters__chip"
+                        onClick={() => setBlockwords('')}
+                        aria-label="Clear block words"
+                        title={blockwords.trim()}
+                      >
+                        Block: {blockwords.trim()} <span aria-hidden="true">×</span>
+                      </button>
+                    ) : null}
+                  </div>
+                  <button
+                    type="button"
+                    className="active-filters__clear"
+                    onClick={clearFilters}
+                  >
+                    Clear all
+                  </button>
+                </div>
+              ) : null}
+
               {showResultsChrome ? (
                 <h2 className="results-section-heading" id="results-heading">
                   {isLoading ? 'Searching…' : episodes.length > 0 ? 'Results' : 'No hits'}
@@ -657,10 +704,7 @@ function App(): JSX.Element {
                         <p className="result-card__desc" style={{ textAlign: 'center', marginBottom: '10px' }}>
                           Your query: <strong>“{lastQuery}”</strong>
                         </p>
-                        <div
-                          className="result-card__radarChart"
-                          style={{ width: '100%', height: '260px', maxWidth: '420px', margin: '0 auto' }}
-                        >
+                        <div className="result-card__radarChart result-card__radarChart--query">
                           <ResponsiveContainer width="100%" height="100%">
                             <RadarChart cx="50%" cy="50%" outerRadius="70%" data={queryRadar}>
                               <PolarGrid />
@@ -708,9 +752,41 @@ function App(): JSX.Element {
                     </p>
                   )}
                   {episodes.length === 0 && lastQuery && !isLoading ? (
-                    <p className="result-count result-count--empty">
-                      Nothing matched. Try simpler words, loosen block words, or turn off safe mode.
-                    </p>
+                    <div className="empty-state" role="note" aria-label="No results tips">
+                      <p className="empty-state__title">Nothing matched.</p>
+                      <p className="empty-state__body">
+                        Try simpler words, loosen block words, or turn off safe mode.
+                      </p>
+                      <div className="empty-state__actions">
+                        {hasActiveFilters ? (
+                          <button type="button" className="empty-state__btn" onClick={clearFilters}>
+                            Clear filters
+                          </button>
+                        ) : null}
+                        <button
+                          type="button"
+                          className="empty-state__btn empty-state__btn--ghost"
+                          onClick={() => {
+                            const el = document.getElementById('search-input')
+                            el?.focus()
+                          }}
+                        >
+                          Edit search
+                        </button>
+                      </div>
+                      <div className="empty-state__examples" aria-label="Try an example">
+                        {EXAMPLE_SEARCHES.slice(0, 3).map((phrase) => (
+                          <button
+                            key={`empty-${phrase}`}
+                            type="button"
+                            className="empty-state__example"
+                            onClick={() => { void handleSearch(phrase) }}
+                          >
+                            {phrase}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   ) : null}
                   {episodes.map((episode, index) => (
                     <ResultCard key={`${episode.rank ?? index}-${episode.title}`} episode={episode} />
@@ -775,7 +851,9 @@ function App(): JSX.Element {
         </div>
       </div>
 
-      <div className="page-layout__content">
+      </div>
+
+      {showScrollTop ? (
         <footer className="site-footer">
           <div className="site-footer__inner">
             <p className="site-footer__brand">Hey Girlie</p>
@@ -783,8 +861,7 @@ function App(): JSX.Element {
             <p className="site-footer__meta">© {new Date().getFullYear()}</p>
           </div>
         </footer>
-      </div>
-      </div>
+      ) : null}
       </main>
 
       {showScrollTop ? (
