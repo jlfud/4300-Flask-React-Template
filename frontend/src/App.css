@@ -1664,7 +1664,7 @@ html[data-theme='dark'] .result-card__filterMeta {
 
 .metric-row {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 10px;
   margin-bottom: 8px;
   justify-content: center;
@@ -1678,9 +1678,18 @@ html[data-theme='dark'] .result-card__filterMeta {
   border-radius: 14px;
   background: rgba(214, 74, 143, 0.08);
   border: 1px solid rgba(214, 74, 143, 0.14);
-  min-width: 120px;
-  flex: 1 1 160px;
+  min-width: 0;
+  flex: 1 1 0;
   max-width: 220px;
+}
+
+@media (max-width: 520px) {
+  .metric-row {
+    flex-wrap: wrap;
+  }
+  .metric-pill {
+    flex: 1 1 160px;
+  }
 }
 
 .metric-pill__k {
